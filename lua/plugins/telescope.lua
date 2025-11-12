@@ -6,6 +6,7 @@ return {
 		"xiyaowong/telescope-emoji.nvim",
 		"nvim-telescope/telescope-project.nvim",
 		"nvim-telescope/telescope-file-browser.nvim",
+		"stevearc/aerial.nvim",
 	},
 	config = function()
 		local telescope = require("telescope")
@@ -20,5 +21,6 @@ return {
 			},
 		})
 		telescope.load_extension("emoji")
+		telescope.load_extension("aerial")
 	end,
 }

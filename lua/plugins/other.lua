@@ -1,7 +1,5 @@
 return {
-	{
-		"eandrju/cellular-automaton.nvim",
-	},
+	{ "eandrju/cellular-automaton.nvim" },
 	{
 		"toppair/peek.nvim",
 		event = { "VeryLazy" },
@@ -19,9 +17,6 @@ return {
 			require("crates").setup()
 		end,
 	},
-	{
-		"mrcjkb/rustaceanvim",
-		version = "^6",
-		lazy = false,
-	},
+	{ "mrcjkb/rustaceanvim", lazy = false },
+	{ "uga-rosa/ccc.nvim" },
 }

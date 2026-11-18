@@ -1,35 +1,35 @@
 local M = {}
-M.bg_color = "#16130b"
+M.bg_color = "#191113"
 M.line_colors = {
 	normal = {
-		a = { bg = "#e3c36c", fg = "#3d2f00", gui = 'bold' },
-		b = { bg = "#584400", fg = "#ffe08d" },
-		c = { bg = "#16130b", fg = "#eae1d4" }
+		a = { bg = "#ffb1c1", fg = "#551d2c", gui = 'bold' },
+		b = { bg = "#713342", fg = "#ffd9df" },
+		c = { bg = "#191113", fg = "#efdee0" }
 	},
 	insert = {
-		a = { bg = "#16130b", fg = "#eae1d4", gui = 'bold' },
-		b = { bg = "#584400", fg = "#ffe08d" },
-		c = { bg = "#16130b", fg = "#eae1d4" }
+		a = { bg = "#191113", fg = "#efdee0", gui = 'bold' },
+		b = { bg = "#713342", fg = "#ffd9df" },
+		c = { bg = "#191113", fg = "#efdee0" }
 	},
 	visual = {
-		a = { bg = "#e3c36c", fg = "#3d2f00", gui = 'bold' },
-		b = { bg = "#584400", fg = "#ffe08d" },
-		c = { bg = "#16130b", fg = "#eae1d4" }
+		a = { bg = "#ffb1c1", fg = "#551d2c", gui = 'bold' },
+		b = { bg = "#713342", fg = "#ffd9df" },
+		c = { bg = "#191113", fg = "#efdee0" }
 	},
 	replace = {
-		a = { bg = "#e3c36c", fg = "#3d2f00", gui = 'bold' },
-		b = { bg = "#584400", fg = "#ffe08d" },
-		c = { bg = "#16130b", fg = "#eae1d4" }
+		a = { bg = "#ffb1c1", fg = "#551d2c", gui = 'bold' },
+		b = { bg = "#713342", fg = "#ffd9df" },
+		c = { bg = "#191113", fg = "#efdee0" }
 	},
 	command = {
-		a = { bg = "#e3c36c", fg = "#3d2f00", gui = 'bold' },
-		b = { bg = "#584400", fg = "#ffe08d" },
-		c = { bg = "#16130b", fg = "#eae1d4" }
+		a = { bg = "#ffb1c1", fg = "#551d2c", gui = 'bold' },
+		b = { bg = "#713342", fg = "#ffd9df" },
+		c = { bg = "#191113", fg = "#efdee0" }
 	},
 	inactive = {
 		a = { bg = "#ffb4ab", fg = "#690005", gui = 'bold' },
-		b = { bg = "#584400", fg = "#ffe08d" },
-		c = { bg = "#16130b", fg = "#eae1d4" }
+		b = { bg = "#713342", fg = "#ffd9df" },
+		c = { bg = "#191113", fg = "#efdee0" }
 	}
 }
 return M

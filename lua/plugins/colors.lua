@@ -6,7 +6,7 @@ return {
 	{ 'ellisonleao/gruvbox.nvim' },
 	{ 'miikanissi/modus-themes.nvim' },
 	{ 'zenbones-theme/zenbones.nvim',    dependencies = "rktjmp/lush.nvim" },
-	{ 'nyoom-engineering/oxocarbon.nvim' },
+	-- { 'nyoom-engineering/oxocarbon.nvim' },
 	{ 'RedsXDD/neopywal.nvim',           as = 'pywal16' },
 	{ 'scottmckendry/cyberdream.nvim',   lazy = false },
 	{ 'RRethy/nvim-base16',              lazy = false },

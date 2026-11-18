@@ -1,85 +1,132 @@
 local map = vim.keymap.set
-local builtin = require("telescope.builtin")
-
-map("n", "<leader>ff", "<cmd>Telescope find_files<CR>")
-map("n", "<leader>fg", "<cmd>Telescope live_grep<CR>")
-map("n", "<leader>fb", "<cmd>Telescope buffers<CR>")
-map("n", "<leader>fo", "<cmd>Telescope oldfiles<CR>")
-map("n", "<leader>fw", "<cmd>Telescope grep_string<CR>")
-map("n", "<leader>fem", "<cmd>Telescope emoji<CR>")
-map("n", "<leader>fp", "<cmd>Telescope project<CR>")
-map("n", "<leader>fs", "<cmd>Telescope aerial<CR>")
-
-map("n", "<leader>tt", "<cmd>TodoTelescope<CR>")
-
-map("n", "<leader>git", "<cmd>LazyGit<CR>")
-map("n", "<leader>gitf", "<cmd>LazyGitCurrentFile<CR>")
-
-map("n", "<leader>cc", "<cmd>CommentToggle<CR>")
-map("n", "<leader>cs", "<cmd>CommentToggle<CR>")
-
-map("n", "<leader>pv", "<cmd>Oil<CR>")
-
-map("n", "<leader>peo", "<cmd>PeekOpen<CR>")
-map("n", "<leader>pec", "<cmd>PeekClose<CR>")
-
-map("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code Action" })
-map("v", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code Action" })
-map("n", "gd", vim.lsp.buf.definition, { desc = "Go to Definition" })
-map("n", "gr", builtin.lsp_references, { desc = "References" })
-map("n", "gt", builtin.lsp_type_definitions, { desc = "Type Definitions" })
-map("n", "gi", builtin.lsp_implementations, { desc = "Implementations" })
-map("n", "<leader>r", vim.lsp.buf.rename, { desc = "Rename" })
-map("n", "<leader>lf", vim.lsp.buf.format, { desc = "Format" })
-map("n", "<leader>y", "\"+y")
-map("n", "<leader>p", "\"+p")
-
----- Tabs
-map("n", "tn", ":tabnew<CR>")
-map("n", "tc", ":tabclose<CR>")
-map("n", "th", ":tabprevious<CR>")
-map("n", "tl", ":tabnext<CR>")
-map("n", "<leader>tH", ":tabm -1<CR>")
-map("n", "<leader>tL", ":tabm +1<CR>")
-for i = 1, 9 do
-	map("n", string.format("tm%d", i), function()
-		vim.cmd("tabn " .. i)
-	end)
-end
-
----- Buffers
-map("n", "[b", ":bnext<CR>")
-map("n", "[b", ":bprevious<CR>")
-
-vim.keymap.set("n", "[d", function()
+local diag_pop_next = function()
 	vim.diagnostic.goto_next()
 	vim.diagnostic.open_float(nil, { focus = false })
-end, { desc = "Next diagnostic + float" })
-
-vim.keymap.set("n", "]d", function()
+end
+local diag_pop_prev = function()
 	vim.diagnostic.goto_prev()
 	vim.diagnostic.open_float(nil, { focus = false })
-end, { desc = "Prev diagnostic + float" })
+end
 
-vim.keymap.set("n", "[f", function()
-	builtin.diagnostics({ bufnr = 0 })
-end, { desc = "Diagnostics (current file)" })
+-- LSP → television pickers
+-- Single result: jump directly. Multiple: write to the cache read by the
+-- `lsp` tv channel (file\tline\tcol\ttext) and open it.
+local lsp_results_file = vim.fn.expand("~/.cache/tv-lsp-results")
 
-vim.keymap.set("n", "[a", function()
-	builtin.diagnostics()
-end, { desc = "Diagnostics (workspace)" })
-vim.keymap.set("n", "[ae", function()
-	builtin.diagnostics({ severity = vim.diagnostic.severity.ERROR })
-end, { desc = "Errors only (workspace)" })
+local function lsp_tv_picker(method, label)
+	return function()
+		local bufnr = vim.api.nvim_get_current_buf()
+		local clients = vim.lsp.get_clients({ bufnr = bufnr, method = method })
+		if #clients == 0 then
+			vim.notify("No LSP client supports " .. method, vim.log.levels.WARN)
+			return
+		end
+		local encoding = clients[1].offset_encoding
+		local params = vim.lsp.util.make_position_params(0, encoding)
+		if method == "textDocument/references" then
+			params.context = { includeDeclaration = true }
+		end
 
-vim.keymap.set("n", "[aw", function()
-	builtin.diagnostics({ severity = vim.diagnostic.severity.WARN })
-end, { desc = "Warnings only (workspace)" })
+		vim.lsp.buf_request_all(bufnr, method, params, function(results)
+			local locations = {}
+			for _, res in pairs(results) do
+				local r = res.result
+				if r then
+					-- result can be a single Location or a list of Location/LocationLink
+					if r.uri or r.targetUri then
+						r = { r }
+					end
+					vim.list_extend(locations, r)
+				end
+			end
 
-vim.keymap.set("n", "[ai", function()
-	builtin.diagnostics({ severity = vim.diagnostic.severity.INFO })
-end, { desc = "Info only (workspace)" })
+			vim.schedule(function()
+				if #locations == 0 then
+					vim.notify("No " .. label .. " found", vim.log.levels.INFO)
+					return
+				end
+				if #locations == 1 then
+					vim.lsp.util.show_document(locations[1], encoding, { focus = true })
+					return
+				end
 
-vim.keymap.set("n", "[ah", function()
-	builtin.diagnostics({ severity = vim.diagnostic.severity.HINT })
-end, { desc = "Hints only (workspace)" })
+				local lines = {}
+				for _, item in ipairs(vim.lsp.util.locations_to_items(locations, encoding)) do
+					local text = vim.trim((item.text or ""):gsub("\t", " "))
+					table.insert(lines, table.concat({
+						vim.fn.fnamemodify(item.filename, ":."),
+						item.lnum,
+						item.col,
+						text,
+					}, "\t"))
+				end
+				vim.fn.mkdir(vim.fn.fnamemodify(lsp_results_file, ":h"), "p")
+				vim.fn.writefile(lines, lsp_results_file)
+				require("tv").tv_channel("lsp")
+			end)
+		end)
+	end
+end
+
+local lsp_ref_picker = lsp_tv_picker("textDocument/references", "references")
+local lsp_def_picker = lsp_tv_picker("textDocument/definition", "definitions")
+local lsp_type_def_picker = lsp_tv_picker("textDocument/typeDefinition", "type definitions")
+local lsp_impl_picker = lsp_tv_picker("textDocument/implementation", "implementations")
+
+-- Yazi
+map("n", "<leader>-", "<cmd>Yazi<CR>")
+map("n", "<leader>cwd", "<cmd>Yazi cwd<CR>")
+map("n", "<C-up>", "<cmd>Yazi toggle<CR>")
+
+-- Television
+map("n", "<leader>ff", "<cmd>Tv files<CR>")
+map("n", "<leader>fg", "<cmd>Tv text<CR>")
+map("n", "<leader>todo", "<cmd>Tv todo-comments<CR>")
+-- Television - GitHub
+map("n", "<leader>gitis", "<cmd>Tv gh-issues<CR>")
+map("n", "<leader>gitpr", "<cmd>Tv gh-prs<CR>")
+-- Television - Git
+map("n", "<leader>gitl", "<cmd>Tv git-log<CR>")
+map("n", "<leader>gitd", "<cmd>Tv git-diff<CR>")
+map("n", "<leader>gitwt", "<cmd>Tv git-worktrees<CR>")
+map("n", "<leader>gitbr", "<cmd>Tv git-branch<CR>")
+-- Television - Rust
+map("n", "<leader>rc", "<cmd>Tv cargo-commands<CR>")
+map("n", "<leader>rp", "<cmd>Tv rust-projects<CR>")
+-- Television - Projects
+map("n", "<leader>fp", "<cmd>Tv projects<CR>")
+
+-- LSP
+map("n", "<leader>r", vim.lsp.buf.rename) -- Exclusive !!
+map("n", "<leader>lf", vim.lsp.buf.format)
+map("n", "gr", lsp_ref_picker)
+map("n", "gd", lsp_def_picker)
+map("n", "gt", lsp_type_def_picker)
+map("n", "gi", lsp_impl_picker)
+
+-- LSP - Diagnostics
+map("n", "]d", diag_pop_next)
+map("n", "[d", diag_pop_prev)
+
+-- LSP - Previews
+map("n", "<C-s>", "<cmd>SymbolsToggle<CR>")
+map("n", "<C-v>md", "<cmd>RenderMarkdown toggle<CR>")
+map("n", "<C-v>ill", "<cmd>IlluminateToggleBuf<CR>")
+
+-- Copy/Paste
+map("n", "<C-y>", "\"+y")
+map("n", "<C-p>", "\"+p")
+
+-- Tabs
+map("n", "<C-t>v", "<cmd>tabnew<CR>")
+map("n", "<C-t>q", "<cmd>tabclose<CR>")
+map("n", "<C-t>h", "<cmd>tabprevious<CR>")
+map("n", "<C-t>l", "<cmd>tabnext<CR>")
+map("n", "<C-t>tH", ":tabm -1<CR>")
+map("n", "<C-t>tL", ":tabm +1<CR>")
+
+-- Tab - Switch 1-10
+for i = 1, 9 do
+	map("n", string.format("<C-t>%d", i), string.format("<cmd>tabn %d<CR>", i))
+end
+map("n", "<C-t>0", "<cmd>tabn 10<CR>")

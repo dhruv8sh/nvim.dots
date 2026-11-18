@@ -3,6 +3,8 @@ vim.g.maplocalleader = " "
 
 require("config.lazy")
 require("config.keymaps")
+vim.notify = require("notify")
+
 vim.opt.guifont = { "JetBrainsMono Nerd Font", ":h12" }
 local bgc = require("config.generated").bg_color
 require("cyberdream").setup({

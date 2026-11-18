@@ -1,14 +1,3 @@
-local root_files = {
-	".luarc.json",
-	".luarc.jsonc",
-	".luacheckrc",
-	".stylua.toml",
-	"stylua.toml",
-	"selene.toml",
-	"selene.yml",
-	".git",
-}
-
 return {
 	"neovim/nvim-lspconfig",
 	dependencies = {
@@ -43,86 +32,41 @@ return {
 				"lua_ls",
 				"gopls",
 				"tailwindcss",
+				"rust_analyzer",
 			},
 			require("mason-lspconfig").setup {
-			    automatic_enable = {
-				exclude = {
-				    "rust_analyzer",
-				},
-				enable = true,
-			    }
+				automatic_enable = true,
 			},
 			handlers = {
 				function(server_name) -- default handler (optional)
 					require("lspconfig")[server_name].setup({
 						capabilities = capabilities,
 					})
-				end,
+					vim.api.nvim_create_autocmd("BufWritePre", {
+						pattern = "*.rs",
+						callback = function(args)
+							vim.lsp.buf.format({ async = false, bufnr = args.buf })
+						end,
+					})
+					require("lint").linters_by_ft = {
+						rust = { "clippy" },
+					}
 
-				zls = function()
-					local lspconfig = require("lspconfig")
-					lspconfig.zls.setup({
-						root_dir = lspconfig.util.root_pattern(".git", "build.zig", "zls.json"),
-						settings = {
-							zls = {
-								enable_inlay_hints = true,
-								enable_snippets = true,
-								warn_style = true,
-							},
-						},
-					})
-					vim.g.zig_fmt_parse_errors = 0
-					vim.g.zig_fmt_autosave = 0
-				end,
-				["lua_ls"] = function()
-					local lspconfig = require("lspconfig")
-					lspconfig.lua_ls.setup({
-						capabilities = capabilities,
-						settings = {
-							Lua = {
-								format = {
-									enable = true,
-									defaultConfig = {
-										indent_style = "space",
-										indent_size = "2",
-									},
-								},
-							},
-						},
+					vim.api.nvim_create_autocmd("BufWritePost", {
+						pattern = "*.rs",
+						callback = function()
+							require("lint").try_lint()
+						end,
 					})
 				end,
-				["tailwindcss"] = function()
-					local lspconfig = require("lspconfig")
-					lspconfig.tailwindcss.setup({
-						capabilities = capabilities,
-						filetypes = {
-							"html",
-							"css",
-							"scss",
-							"javascript",
-							"javascriptreact",
-							"typescript",
-							"typescriptreact",
-							"vue",
-							"svelte",
-						},
-						settings = {
-							tailwindCSS = {
-								experimental = {
-									classRegex = {
-										"tw`([^`]*)",
-										'tw="([^"]*)',
-										'tw={"([^"}]*)',
-										"tw\\.\\w+`([^`]*)",
-										"tw\\(.*?\\)`([^`]*)",
-									},
-								},
-							},
-						},
-					})
-				end,
-				["rust_analyzer"] = function() end,
-				["rust-analyzer"] = function() end,
+				["rust_analyzer"] = {
+					check = {
+						command = "check",
+					},
+					cargo = {
+						allFeatures = true,
+					}
+				},
 			},
 		})
 
@@ -146,18 +90,18 @@ return {
 				{ name = "buffer" },
 			}),
 			formatting = {
-			      fields = {'menu', 'abbr', 'kind'},
-			      format = function(entry, item)
-				  local menu_icon ={
-				      nvim_lsp = 'λ',
-				      vsnip = '⋗',
-				      buffer = 'Ω',
-				      path = '🖫',
-				  }
-				  item.menu = menu_icon[entry.source.name]
-				  return item
-			      end,
-  			},
+				fields = { 'menu', 'abbr', 'kind' },
+				format = function(entry, item)
+					local menu_icon = {
+						nvim_lsp = 'λ',
+						vsnip = '⋗',
+						buffer = 'Ω',
+						path = '🖫',
+					}
+					item.menu = menu_icon[entry.source.name]
+					return item
+				end,
+			},
 		})
 
 		vim.diagnostic.config({
